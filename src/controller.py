@@ -1,6 +1,9 @@
+import os
+
 from fastapi import APIRouter
 from .models import Model
 from .schemas import TrainData, PredictData
+from .model_manager import ModelStorageManager
 
 
 class Controller:
@@ -93,6 +96,11 @@ class Controller:
         return api_router
 
 
-handler = Model()
+storage_manager = ModelStorageManager(
+    endpoint=os.environ.get("ENDPOINT"),
+    access_key=os.environ.get("ACCESS_KEY"),
+    secret_key=os.environ.get("SECRET_KEY")
+)
+handler = Model(storage_manager)
 controller = Controller(handler)
 router = controller.configure_routes()

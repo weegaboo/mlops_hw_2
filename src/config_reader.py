@@ -11,7 +11,10 @@ class Config(BaseSettings):
         save_dir (str): The directory path where models will be saved.
         model_config (SettingsConfigDict): Configuration settings for models, loaded from an environment file.
     """
-    save_dir: str
+    # save_dir: str
+    endpoint: str
+    access_key: str
+    secret_key: str
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
 

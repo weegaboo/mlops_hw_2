@@ -13,8 +13,8 @@ class Model:
     Attributes:
         storage_manager (ModelStorageManager): An instance of ModelStorageManager for model storage.
     """
-    def __init__(self):
-        self.storage_manager = ModelStorageManager
+    def __init__(self, storage_manager: ModelStorageManager):
+        self.storage_manager = storage_manager
 
     def train(self, data: TrainData) -> Dict[str, Any]:
         """
@@ -37,6 +37,7 @@ class Model:
             manager.model.fit(data.features, data.labels)
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
+        # Добавить сохранение данных и модели с версионированием
         self.storage_manager.save(manager.model, data.model_type)
         return {
             'message': 'Model trained successfully',
@@ -63,4 +64,5 @@ class Model:
             prediction = model.predict(data.features)
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
+        # Добавить сохранение данных и версионирование
         return {'prediction': prediction.tolist()}

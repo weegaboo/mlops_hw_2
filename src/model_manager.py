@@ -2,7 +2,7 @@ import os
 import pickle
 
 from typing import Dict, Any, Type
-from sklearn.base import BaseEstimator
+from minio import Minio
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
@@ -70,12 +70,16 @@ class ModelStorageManager:
         open(name: str) -> Any: Opens a saved model by name.
         delete(name: str): Deletes a saved model by name.
     """
-    save_dir = config.save_dir
     models = {
         'LogisticRegression': LogisticRegression,
         'RandomForestClassifier': RandomForestClassifier,
         'SVC': SVC
     }
+
+    def __init__(self, endpoint: str, access_key: str, secret_key: str):
+        self.client = Minio(endpoint, access_key, secret_key, secure=False)
+        self.client.make_bucket(bucket_name="models")
+        self.client.make_bucket(bucket_name="data")
 
     @classmethod
     def __fetch_check(cls, fetch_from, name: str):
@@ -88,7 +92,9 @@ class ModelStorageManager:
 
     @classmethod
     def __get_names_from_save_dir(cls):
-        return [file.split(sep='.')[0] for file in os.listdir(cls.save_dir)]
+
+        # return [file.split(sep='.')[0] for file in os.listdir(cls.save_dir)]
+        pass
 
     @classmethod
     def fetch_training_model(cls, name: str) -> Any:
