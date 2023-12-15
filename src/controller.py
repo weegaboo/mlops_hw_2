@@ -91,15 +91,20 @@ class Controller:
             Returns:
                 dict: The result of the model deletion operation.
             """
-            return self.processor.storage_manager.delete(name)
+            return self.processor.storage_manager.delete("trained-models", name)
 
         return api_router
 
 
+# storage_manager = ModelStorageManager(
+#     endpoint=os.environ.get("ENDPOINT"),
+#     access_key=os.environ.get("ACCESS_KEY"),
+#     secret_key=os.environ.get("SECRET_KEY")
+# )
 storage_manager = ModelStorageManager(
-    endpoint=os.environ.get("ENDPOINT"),
-    access_key=os.environ.get("ACCESS_KEY"),
-    secret_key=os.environ.get("SECRET_KEY")
+    endpoint="localhost:9000",
+    access_key="minioadmin",
+    secret_key="minioadmin"
 )
 handler = Model(storage_manager)
 controller = Controller(handler)

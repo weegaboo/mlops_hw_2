@@ -1,13 +1,13 @@
 import os
+import io
 import pickle
 
-from typing import Dict, Any, Type
+from typing import Dict, List, Any, Type
 from minio import Minio
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from fastapi import HTTPException
-from .config_reader import config
 
 
 class HyperparametersManager:
@@ -75,26 +75,23 @@ class ModelStorageManager:
         'RandomForestClassifier': RandomForestClassifier,
         'SVC': SVC
     }
+    buckets = {"trained-models", "features", "labels"}
 
     def __init__(self, endpoint: str, access_key: str, secret_key: str):
         self.client = Minio(endpoint, access_key, secret_key, secure=False)
-        self.client.make_bucket(bucket_name="models")
-        self.client.make_bucket(bucket_name="data")
+        server_buckets = [bucket.name for bucket in self.client.list_buckets()]
+        for new_bucket in self.buckets.difference(server_buckets):
+            self.client.make_bucket(bucket_name=new_bucket)
+
 
     @classmethod
     def __fetch_check(cls, fetch_from, name: str):
         if name not in fetch_from:
             raise HTTPException(status_code=404, detail="Model not found")
 
-    @classmethod
-    def __join_save_dir_to_name(cls, name: str):
-        return os.path.join(cls.save_dir, f'{name}.pkl')
-
-    @classmethod
-    def __get_names_from_save_dir(cls):
-
-        # return [file.split(sep='.')[0] for file in os.listdir(cls.save_dir)]
-        pass
+    def fetch_trained_model_names(self) -> List[str]:
+        trained_models = self.client.list_objects(bucket_name="trained-models")
+        return [model.object_name for model in trained_models]
 
     @classmethod
     def fetch_training_model(cls, name: str) -> Any:
@@ -115,8 +112,7 @@ class ModelStorageManager:
         cls.__fetch_check(cls.models, name)
         return cls.models[name]
 
-    @classmethod
-    def fetch_predicting_model(cls, name: str) -> Any:
+    def fetch_predicting_model(self, name: str) -> Any:
         """
         fetch_predicting_model Method
 
@@ -131,12 +127,11 @@ class ModelStorageManager:
         Raises:
             HTTPException: If the model is not found.
         """
-        trained_models = cls.__get_names_from_save_dir()
-        cls.__fetch_check(trained_models, name)
-        return cls.open(name)
+        trained_models = self.fetch_trained_model_names()
+        self.__fetch_check(trained_models, name)
+        return self.open(bucket_name="trained-models", object_name=name)
 
-    @classmethod
-    def get_available_for_predict(cls) -> Dict:
+    def get_available_for_predict(self) -> Dict:
         """
         get_available_for_predict Method
 
@@ -145,61 +140,60 @@ class ModelStorageManager:
         Returns:
             Dict: A dictionary containing available models for predictions.
         """
-        trained_models = [
-            file
-            for file in cls.__get_names_from_save_dir()
-            if file in cls.models
-        ]
-        return {'models': trained_models}
+        return {'models': self.fetch_trained_model_names()}
 
-    @classmethod
-    def save(cls, model, name: str):
+    def save(self, item, bucket_name: str, object_name: str):
         """
         save Method
 
-        Saves a trained model to the specified name.
+        Saves trained model or data to the specified name.
 
         Args:
-            model: The trained machine learning model.
-            name (str): The name under which the model should be saved.
+            item: data or model
+            bucket_name (str):
+            object_name (str):
         """
-        path = cls.__join_save_dir_to_name(name)
-        with open(path, 'wb') as file:
-            pickle.dump(model, file)
 
-    @classmethod
-    def open(cls, name: str) -> Any:
+        bytes = pickle.dumps(item)
+        self.client.put_object(
+            bucket_name=bucket_name,
+            object_name=object_name,
+            data=io.BytesIO(bytes),
+            length=len(bytes)
+        )
+        #ДОБАВИТЬ DVC
+
+    def open(self, bucket_name: str, object_name: str) -> Any:
         """
         open Method
 
         Opens a saved model by name.
 
         Args:
-            name (str): The name of the model to open.
+            bucket_name (str): bucket name
+            object_name (str): object name
 
         Returns:
             Any: The opened machine learning model.
         """
-        path = cls.__join_save_dir_to_name(name)
-        with open(path, 'rb') as file:
-            model = pickle.load(file)
-        return model
 
-    @classmethod
-    def delete(cls, name: str):
+        answer = self.client.get_object(bucket_name=bucket_name, object_name=object_name)
+        if answer.status != 200:
+            raise HTTPException(status_code=answer.status, detail="Server open error")
+        return pickle.loads(answer.data)
+
+    def delete(self, bucket_name: str, object_name: str):
         """
         delete Method
 
         Deletes a saved model by name.
 
         Args:
-            name (str): The name of the model to delete.
+            bucket_name (str): bucket name
+            object_name (str): object name
 
         Returns:
             Dict: A dictionary with a message indicating the success of the model deletion.
         """
-        trained_models = cls.__get_names_from_save_dir()
-        cls.__fetch_check(trained_models, name)
-        path = cls.__join_save_dir_to_name(name)
-        os.remove(path)
+        self.client.remove_object(bucket_name=bucket_name, object_name=object_name)
         return {'message': 'Model removed successfully'}

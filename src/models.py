@@ -37,8 +37,21 @@ class Model:
             manager.model.fit(data.features, data.labels)
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
-        # Добавить сохранение данных и модели с версионированием
-        self.storage_manager.save(manager.model, data.model_type)
+        self.storage_manager.save(
+            item=manager.model,
+            bucket_name="trained-models",
+            object_name=data.model_type
+        )
+        self.storage_manager.save(
+            item=data.features,
+            bucket_name="features",
+            object_name="train_features"
+        )
+        self.storage_manager.save(
+            item=data.labels,
+            bucket_name="labels",
+            object_name="train_labels"
+        )
         return {
             'message': 'Model trained successfully',
             'model_type': data.model_type
@@ -64,5 +77,15 @@ class Model:
             prediction = model.predict(data.features)
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
-        # Добавить сохранение данных и версионирование
+        self.storage_manager.save(
+            item=data.features,
+            bucket_name="features",
+            object_name="predict_features"
+        )
+        self.storage_manager.save(
+            item=prediction,
+            bucket_name="labels",
+            object_name="prediction"
+        )
+        # Добавить версионирование
         return {'prediction': prediction.tolist()}
