@@ -1,3 +1,4 @@
+import pickle
 from typing import Dict, Any
 from fastapi import HTTPException
 from .schemas import TrainData, PredictData
@@ -42,16 +43,18 @@ class Model:
             bucket_name="trained-models",
             object_name=data.model_type
         )
-        self.storage_manager.save(
-            item=data.features,
-            bucket_name="features",
-            object_name="train_features"
-        )
+        self.storage_manager.dvc.version_train_features(data.features)
+        # self.storage_manager.save(
+        #     item=data.features,
+        #     bucket_name="features",
+        #     object_name="train_features"
+        # )
         self.storage_manager.save(
             item=data.labels,
             bucket_name="labels",
             object_name="train_labels"
         )
+
         return {
             'message': 'Model trained successfully',
             'model_type': data.model_type
