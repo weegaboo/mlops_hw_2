@@ -96,16 +96,16 @@ class Controller:
         return api_router
 
 
-# storage_manager = ModelStorageManager(
-#     endpoint=os.environ.get("ENDPOINT"),
-#     access_key=os.environ.get("ACCESS_KEY"),
-#     secret_key=os.environ.get("SECRET_KEY")
-# )
 storage_manager = ModelStorageManager(
-    endpoint="localhost:9000",
-    access_key="minioadmin",
-    secret_key="minioadmin"
+    endpoint=os.environ.get("ENDPOINT"),
+    access_key=os.environ.get("ACCESS_KEY"),
+    secret_key=os.environ.get("SECRET_KEY")
 )
+# storage_manager = ModelStorageManager(
+#     endpoint="localhost:9000",
+#     access_key="minioadmin",
+#     secret_key="minioadmin"
+# )
 handler = Model(storage_manager)
 controller = Controller(handler)
 router = controller.configure_routes()
