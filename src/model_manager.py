@@ -72,10 +72,6 @@ class DVC:
         os.system("rm train_features")
 
 
-
-
-
-
 class ModelStorageManager:
     """
     ModelStorageManager Class
@@ -190,7 +186,6 @@ class ModelStorageManager:
             data=io.BytesIO(bytes),
             length=len(bytes)
         )
-        #ДОБАВИТЬ DVC
 
     def open(self, bucket_name: str, object_name: str) -> Any:
         """
